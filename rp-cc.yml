@@ -1,0 +1,42 @@
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaRestProxy
+metadata:
+  name: kafkarestproxy
+  namespace: confluent
+spec:
+  replicas: 1
+  #license:
+  #  secretRef: confluent-license
+  mountedSecrets:
+    - secretRef: rp-users
+  image:
+    application: 155880749572.dkr.ecr.us-west-2.amazonaws.com/cc/conf/kafka-rest-proxy:latest
+    init: 155880749572.dkr.ecr.us-west-2.amazonaws.com/cc/conf/confluent-init:latest
+  dependencies:
+    kafka:
+      bootstrapEndpoint: pkc-4ygn6.europe-west3.gcp.confluent.cloud:9092
+      authentication:
+        type: plain
+        jaasConfig:
+          secretRef: rp-kafka
+      tls:
+        enabled: true
+        ignoreTrustStoreConfig: true
+      schemaRegistry:
+        url: https://psrc-lgkvv.europe-west3.gcp.confluent.cloud
+        authentication:
+          type: basic
+          basic:
+            secretRef: rp-sr
+  configOverrides:
+    server:
+      - kafka.rest.resource.extension.class=io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension
+      - client.security.protocol=SASL_SSL
+      - confluent.rest.auth.propagate.method=JETTY_AUTH
+      - authentication.method=BASIC
+      - authentication.realm=KafkaRest
+      - authentication.roles=krp-users
+    jvm:
+      - "-Xms4g"
+      - "-Djava.security.auth.login.config=/mnt/secrets/rp-users/restProxyUsers.jaas"
+      - "-Xmx5g"
